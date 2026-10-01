@@ -1,1 +1,1 @@
-# 🎓 Sistema de Registro de Alunos (CRUD)
+# 🎓 Sistema de Cadastro de Alunos (CRUD)
