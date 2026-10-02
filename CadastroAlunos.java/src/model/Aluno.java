@@ -1,3 +1,5 @@
+package model;
+
 public class Aluno {
 
     private int id;
@@ -13,6 +15,7 @@ public class Aluno {
         this.curso = curso;
         this.nota = nota;
     }
+
 
     public int getId() {
         return id;
