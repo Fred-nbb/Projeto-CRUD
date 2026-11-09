@@ -16,7 +16,6 @@ public class Aluno {
         this.nota = nota;
     }
 
-
     public int getId() {
         return id;
     }
@@ -51,5 +50,11 @@ public class Aluno {
 
     public void setNota(double nota) {
         this.nota = nota;
+    }
+
+    @Override
+    public String toString() {
+        return "ID: " + id + " | Nome: " + nome + " | Matrícula: " + matricula
+                + " | Curso: " + curso + " | Nota: " + nota;
     }
 }
