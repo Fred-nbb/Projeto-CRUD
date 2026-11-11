@@ -1,0 +1,7 @@
+# arquivos compilados
+bin/
+*.class
+
+# dados criados pelo programa quando ele roda
+alunos.csv
+alunos.csv.bak
