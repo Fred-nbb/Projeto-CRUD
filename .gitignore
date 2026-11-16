@@ -5,3 +5,6 @@ bin/
 # dados criados pelo programa quando ele roda
 alunos.csv
 alunos.csv.bak
+
+# documentação gerada pelo javadoc
+docs/

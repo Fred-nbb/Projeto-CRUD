@@ -10,18 +10,36 @@ import java.util.Scanner;
 import model.Aluno;
 import persistence.ArquivoAlunos;
 
+/**
+ * Menu do sistema no terminal: mostra as opções, lê o que a pessoa digita e chama o
+ * {@link CadastroAlunos}.
+ *
+ * <p>O menu só carrega o arquivo quando o programa abre. Salvar depois de cada alteração
+ * não é mais com ele: isso é feito por um observer registrado no {@code CadastroAlunos}
+ * (veja {@code SalvarAoAlterarObserver}).</p>
+ */
 public class Menu {
 
     private final CadastroAlunos cadastro;
     private final ArquivoAlunos arquivo;
     private final Scanner scanner;
 
+    /**
+     * Cria o menu.
+     *
+     * @param cadastro o cadastro de alunos que o menu vai usar
+     * @param arquivo  o arquivo de onde os alunos são carregados ao abrir o programa
+     */
     public Menu(CadastroAlunos cadastro, ArquivoAlunos arquivo) {
         this.cadastro = cadastro;
         this.arquivo = arquivo;
         this.scanner = new Scanner(System.in);
     }
 
+    /**
+     * Carrega os alunos salvos e mostra o menu até a pessoa escolher a opção 0 (Sair)
+     * ou até a entrada do teclado ser encerrada.
+     */
     public void iniciar() {
         carregarDados();
 
@@ -73,7 +91,6 @@ public class Menu {
         double nota = lerNota("Nota: ");
 
         Aluno aluno = cadastro.cadastrarAluno(nome, matricula, curso, nota);
-        salvarDados();
         System.out.println("Aluno cadastrado com sucesso! ID: " + aluno.getId());
     }
 
@@ -104,7 +121,6 @@ public class Menu {
         double nota = lerNota("Nova nota: ");
 
         cadastro.atualizarAluno(id, nome, matricula, curso, nota);
-        salvarDados();
         System.out.println("Aluno atualizado com sucesso!");
     }
 
@@ -112,7 +128,6 @@ public class Menu {
         int id = lerInteiro("Digite o ID do aluno que deseja deletar: ");
 
         cadastro.deletarAluno(id);
-        salvarDados();
         System.out.println("Aluno deletado com sucesso!");
     }
 
@@ -131,15 +146,6 @@ public class Menu {
             System.out.println("Não foi possível carregar os alunos salvos: " + e.getMessage());
             fazerBackupDoArquivo();
             System.out.println("O sistema vai começar com a lista vazia.");
-        }
-    }
-
-    private void salvarDados() {
-        try {
-            arquivo.salvar(cadastro.listarAlunos());
-        } catch (IOException e) {
-            System.out.println("Atenção: a alteração foi feita, mas não foi possível salvar no arquivo: "
-                    + e.getMessage());
         }
     }
 
@@ -184,4 +190,3 @@ public class Menu {
         }
     }
 }
-

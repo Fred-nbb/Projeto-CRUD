@@ -30,16 +30,18 @@ Projeto-CRUD/
     ├── lib/
     │   └── junit-platform-console-standalone.jar   # JUnit 5
     ├── src/
-    │   ├── app/Main.java                 # inicia o programa
+    │   ├── app/Main.java                 # inicia o programa e liga as peças
     │   ├── model/Aluno.java              # dados do aluno
-    │   ├── controller/CadastroAlunos.java  # regras e operações do CRUD
-    │   ├── persistence/ArquivoAlunos.java  # leitura e escrita do alunos.csv
+    │   ├── controller/CadastroAlunos.java  # regras e operações do CRUD (sujeito do Observer)
+    │   ├── validation/                   # Strategy: regras de validação
+    │   ├── observer/CadastroObserver.java  # Observer: interface de quem quer ser avisado
+    │   ├── persistence/                  # leitura/escrita do alunos.csv + observer que salva
     │   ├── exception/                    # exceções do sistema
     │   └── view/Menu.java                # menu e leitura do teclado
     └── test/
-        ├── controller/CadastroAlunosTest.java
-        ├── controller/CadastroComArquivoTest.java
-        └── persistence/ArquivoAlunosTest.java
+        ├── controller/                   # CadastroAlunosTest, CadastroComArquivoTest, CadastroComValidadorTest, CadastroObserverTest
+        ├── persistence/                  # ArquivoAlunosTest, SalvarAoAlterarObserverTest
+        └── validation/                   # RegrasValidacaoTest, ValidadorAlunoTest
 ```
 
 ## Instalação
@@ -94,11 +96,111 @@ javac -encoding UTF-8 -d bin -cp lib/junit-platform-console-standalone.jar -sour
 java -jar lib/junit-platform-console-standalone.jar execute -cp bin --scan-classpath
 ```
 
-São 30 testes:
+São 55 testes:
 
 - `CadastroAlunosTest`: cadastro, listagem, atualização, remoção e as validações (campo vazio, nota fora de 0 a 10, matrícula repetida, ID que não existe).
 - `ArquivoAlunosTest`: salvar e ler o arquivo, arquivo que ainda não existe, linha com erro e cópia de segurança.
 - `CadastroComArquivoTest`: testa o cadastro junto com o arquivo, como se o programa fosse fechado e aberto de novo. Confere que os alunos voltam, que a atualização e a remoção continuam valendo e que os IDs continuam de onde pararam.
+- `RegrasValidacaoTest`, `ValidadorAlunoTest` e `CadastroComValidadorTest`: testam cada regra de validação sozinha, a ordem em que elas são conferidas e a troca de regras no cadastro (padrão Strategy).
+- `CadastroObserverTest` e `SalvarAoAlterarObserverTest`: conferem quando os observers são avisados (e quando não são) e se o arquivo é atualizado sozinho a cada alteração (padrão Observer).
+
+## Padrões de projeto (Etapa 5)
+
+Foram aplicados dois padrões GoF, escolhidos por problemas que o código tinha de verdade:
+
+| Padrão | Tipo | Problema que tinha no código | Onde está |
+|---|---|---|---|
+| **Strategy** | comportamento | as regras de validação eram métodos fixos dentro do `CadastroAlunos` | pacote `validation` |
+| **Observer** | comportamento | o `Menu` tinha que lembrar de salvar o arquivo depois de cada operação | pacote `observer` + `persistence/SalvarAoAlterarObserver` |
+
+```mermaid
+classDiagram
+    class RegraValidacao {
+        <<interface>>
+        +validar(Aluno)
+    }
+    class CampoTextoRegra
+    class NotaRegra
+    class ValidadorAluno {
+        -List~RegraValidacao~ regras
+        +validar(Aluno)
+        +padrao()$ ValidadorAluno
+    }
+    class CadastroAlunos {
+        -ValidadorAluno validador
+        -List~CadastroObserver~ observers
+        +adicionarObserver(CadastroObserver)
+        +removerObserver(CadastroObserver)
+    }
+    class CadastroObserver {
+        <<interface>>
+        +cadastroAlterado(List~Aluno~)
+    }
+    class SalvarAoAlterarObserver
+    class ArquivoAlunos
+    RegraValidacao <|.. CampoTextoRegra
+    RegraValidacao <|.. NotaRegra
+    ValidadorAluno o-- RegraValidacao
+    CadastroAlunos --> ValidadorAluno
+    CadastroAlunos o-- CadastroObserver
+    CadastroObserver <|.. SalvarAoAlterarObserver
+    SalvarAoAlterarObserver --> ArquivoAlunos
+```
+
+### Strategy: regras de validação
+
+**Problema.** Na versão anterior, `validarDados` e `validarTexto` ficavam dentro do `CadastroAlunos`, junto com as regras do CRUD. Toda regra nova (por exemplo, limitar o tamanho do nome) obrigava a mexer nessa classe. Ela também importava o `ArquivoAlunos` só para saber qual era o caractere `;`.
+
+**Solução.** Cada regra virou uma classe que implementa a interface `RegraValidacao` (a estratégia):
+
+- `CampoTextoRegra`: o campo não pode ser vazio nem ter `;`. A mesma classe serve para nome, matrícula e curso.
+- `NotaRegra`: a nota tem que estar entre 0 e 10.
+
+O `ValidadorAluno` (o contexto) recebe uma lista de regras e chama `validar` em cada uma, na ordem, parando na primeira que falhar. O `CadastroAlunos` só conhece o `ValidadorAluno`.
+
+**Por que é adequado.** As regras de validação mudam com mais frequência que o resto do CRUD, e todas têm o mesmo formato (recebem um aluno e lançam `DadosInvalidosException` se ele for inválido). Com o Strategy dá para adicionar, tirar ou trocar regras sem mexer no `CadastroAlunos`. Os testes fazem isso: um cadastro com validador sem nenhuma regra e outro com uma regra nova escrita como lambda.
+
+```java
+// o validador do sistema (ValidadorAluno.padrao())
+new ValidadorAluno(List.of(
+        new CampoTextoRegra("nome", Aluno::getNome, ";"),
+        new CampoTextoRegra("matrícula", Aluno::getMatricula, ";"),
+        new CampoTextoRegra("curso", Aluno::getCurso, ";"),
+        new NotaRegra()));
+
+// um cadastro com outras regras, sem alterar o CadastroAlunos
+CadastroAlunos cadastro = new CadastroAlunos(new ValidadorAluno(List.of(new NotaRegra())));
+```
+
+### Observer: salvar o arquivo quando o cadastro muda
+
+**Problema.** O `Menu` chamava `salvarDados()` em três lugares (depois de cadastrar, atualizar e deletar). Se alguém criasse outra tela ou esquecesse essa chamada, as alterações não iam para o arquivo. Além disso, o menu (camada de visão) conhecia a camada de persistência para salvar.
+
+**Solução.** O `CadastroAlunos` é o objeto observado: ele tem uma lista de `CadastroObserver` e, depois de cada cadastro, atualização ou remoção que deu certo, chama `cadastroAlterado(alunos)` em todos. Quem salva é o `SalvarAoAlterarObserver`, registrado no `Main`:
+
+```java
+cadastro.adicionarObserver(new SalvarAoAlterarObserver(arquivo, System.out::println));
+```
+
+O `Menu` não salva mais nada. Se o arquivo não puder ser salvo, o observer mostra o mesmo aviso de antes e a alteração continua valendo na memória.
+
+**Por que é adequado.** "Fazer algo quando o cadastro muda" é exatamente o problema do Observer. O cadastro não precisa saber o que acontece depois da alteração, então dá para ligar outras reações (um histórico de alterações, por exemplo) criando um novo observer, sem mexer no cadastro nem no menu.
+
+Detalhes que foram pensados:
+
+- Erros (matrícula repetida, dado inválido, ID que não existe) não avisam os observers, porque nada mudou.
+- `carregarAlunos` (que lê o arquivo ao abrir o programa) também não avisa, senão o sistema salvaria de volta o que acabou de ler.
+- A lista enviada aos observers não pode ser modificada, então um observer não atrapalha os outros nem o cadastro.
+
+## Javadoc
+
+Todas as classes, construtores e métodos públicos têm Javadoc. Para gerar a documentação em HTML, dentro da pasta `CadastroAlunos.java`:
+
+```
+javadoc -encoding UTF-8 -docencoding UTF-8 -charset UTF-8 -d docs -sourcepath src -subpackages app:controller:exception:model:observer:persistence:validation:view
+```
+
+Depois é só abrir o arquivo `docs/index.html` no navegador. A pasta `docs` não vai pro Git (está no `.gitignore`), porque dá pra gerar de novo quando precisar.
 
 ## O que foi usado em cada parte
 
@@ -136,7 +238,8 @@ id;nome;matricula;curso;nota
 ### Código sem duplicação
 
 - A leitura do teclado fica toda em `lerTexto`, `lerInteiro` e `lerNota` (no `Menu`).
-- A validação dos dados fica num método só (`validarDados`), usado pelo cadastro, pela atualização e pelo carregamento do arquivo.
+- A validação dos dados fica toda no `ValidadorAluno` (padrão Strategy), usado pelo cadastro, pela atualização e pelo carregamento do arquivo.
+- O salvamento no arquivo fica num lugar só, o `SalvarAoAlterarObserver` (padrão Observer), em vez de uma chamada em cada operação do menu.
 - Um único método (`adicionar`) coloca o aluno nas coleções.
 
 ## Integrantes
