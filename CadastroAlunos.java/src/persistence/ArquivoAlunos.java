@@ -12,28 +12,53 @@ import java.util.Collection;
 import java.util.List;
 import model.Aluno;
 
+/**
+ * Salva e lê os alunos de um arquivo CSV (uma linha por aluno, colunas separadas por ';').
+ *
+ * <p>A primeira linha do arquivo é o cabeçalho {@code id;nome;matricula;curso;nota}.
+ * Os arquivos são lidos e escritos com a codificação UTF-8.</p>
+ */
 public class ArquivoAlunos {
 
+    /** Caractere que separa as colunas no arquivo. Por isso ele não pode aparecer nos dados. */
     public static final String SEPARADOR = ";";
     private static final String CABECALHO = "id;nome;matricula;curso;nota";
     private static final int QUANTIDADE_COLUNAS = 5;
 
     private final Path caminho;
 
+    /**
+     * Cria o objeto que trabalha com o arquivo indicado. O arquivo só é criado quando
+     * {@link #salvar(Collection)} é chamado pela primeira vez.
+     *
+     * @param caminho o caminho do arquivo CSV (por exemplo, {@code alunos.csv})
+     */
     public ArquivoAlunos(Path caminho) {
         this.caminho = caminho;
     }
 
+    /**
+     * Devolve o caminho do arquivo usado por esta classe.
+     *
+     * @return o caminho do arquivo CSV
+     */
     public Path getCaminho() {
         return caminho;
     }
 
+    /**
+     * Reescreve o arquivo inteiro com a lista atual de alunos.
+     *
+     * @param alunos os alunos que devem ficar salvos
+     * @throws IOException se não for possível escrever no arquivo
+     */
     public void salvar(Collection<Aluno> alunos) throws IOException {
         Path pasta = caminho.toAbsolutePath().getParent();
         if (pasta != null) {
             Files.createDirectories(pasta);
         }
 
+        // try-with-resources: fecha o arquivo sozinho, mesmo se der erro no meio
         try (BufferedWriter escritor = Files.newBufferedWriter(caminho, StandardCharsets.UTF_8)) {
             escritor.write(CABECALHO);
             escritor.newLine();
@@ -45,6 +70,14 @@ public class ArquivoAlunos {
         }
     }
 
+    /**
+     * Lê todos os alunos do arquivo. Se o arquivo ainda não existe (primeira vez
+     * que o programa roda), devolve uma lista vazia.
+     *
+     * @return os alunos lidos, na ordem em que estavam no arquivo
+     * @throws IOException se o arquivo não puder ser lido ou se alguma linha estiver errada
+     *                     (a mensagem diz o número da linha com problema)
+     */
     public List<Aluno> carregar() throws IOException {
         List<Aluno> alunos = new ArrayList<>();
 
@@ -60,7 +93,7 @@ public class ArquivoAlunos {
                 numeroLinha++;
 
                 if (numeroLinha == 1) {
-                    linha = linha.replace("﻿", ""); 
+                    linha = linha.replace("﻿", ""); // tira o BOM que o Excel às vezes coloca
                     if (linha.equals(CABECALHO)) {
                         continue;
                     }
@@ -75,6 +108,13 @@ public class ArquivoAlunos {
         return alunos;
     }
 
+    /**
+     * Copia o arquivo para "alunos.csv.bak" (mesmo nome com final {@code .bak}),
+     * para não perder os dados se ele estiver com problema.
+     *
+     * @return o caminho da cópia de segurança
+     * @throws IOException se não for possível copiar o arquivo
+     */
     public Path fazerBackup() throws IOException {
         Path backup = caminho.resolveSibling(caminho.getFileName() + ".bak");
         Files.copy(caminho, backup, StandardCopyOption.REPLACE_EXISTING);
