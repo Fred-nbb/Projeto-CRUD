@@ -8,3 +8,6 @@ alunos.csv.bak
 
 # documentação gerada pelo javadoc
 docs/
+
+# arquivos de sistema do macOS
+.DS_Store
