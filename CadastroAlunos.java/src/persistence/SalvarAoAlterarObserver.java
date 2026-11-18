@@ -8,10 +8,7 @@ import observer.CadastroObserver;
 
 /**
  * Observer que salva os alunos no arquivo sempre que o cadastro muda.
- *
- * <p>Antes o {@code Menu} chamava o salvamento depois de cada operação. Com este observer,
- * o {@code CadastroAlunos} só avisa que mudou e o arquivo é atualizado sozinho, sem o
- * cadastro nem o menu precisarem conhecer o {@link ArquivoAlunos}.</p>
+ * Assim o cadastro e o menu não precisam conhecer a classe ArquivoAlunos.
  */
 public class SalvarAoAlterarObserver implements CadastroObserver {
 
@@ -23,7 +20,6 @@ public class SalvarAoAlterarObserver implements CadastroObserver {
      *
      * @param arquivo  o arquivo onde os alunos serão salvos
      * @param avisador o que fazer com a mensagem quando não for possível salvar
-     *                 (por exemplo, {@code System.out::println})
      */
     public SalvarAoAlterarObserver(ArquivoAlunos arquivo, Consumer<String> avisador) {
         this.arquivo = arquivo;
@@ -31,8 +27,8 @@ public class SalvarAoAlterarObserver implements CadastroObserver {
     }
 
     /**
-     * Salva a lista atual de alunos no arquivo. Se der erro, não lança exceção:
-     * a alteração já foi feita no cadastro, então só avisa o usuário.
+     * Salva a lista atual no arquivo. Se der erro, só avisa o usuário,
+     * porque a alteração já foi feita no cadastro.
      *
      * @param alunos a lista atual de alunos
      */

@@ -11,12 +11,8 @@ import model.Aluno;
 import persistence.ArquivoAlunos;
 
 /**
- * Menu do sistema no terminal: mostra as opções, lê o que a pessoa digita e chama o
- * {@link CadastroAlunos}.
- *
- * <p>O menu só carrega o arquivo quando o programa abre. Salvar depois de cada alteração
- * não é mais com ele: isso é feito por um observer registrado no {@code CadastroAlunos}
- * (veja {@code SalvarAoAlterarObserver}).</p>
+ * Menu do sistema no terminal. Só carrega o arquivo ao abrir; quem salva depois de
+ * cada alteração é o observer SalvarAoAlterarObserver.
  */
 public class Menu {
 
@@ -37,8 +33,7 @@ public class Menu {
     }
 
     /**
-     * Carrega os alunos salvos e mostra o menu até a pessoa escolher a opção 0 (Sair)
-     * ou até a entrada do teclado ser encerrada.
+     * Carrega os alunos salvos e mostra o menu até a pessoa escolher a opção 0 (Sair).
      */
     public void iniciar() {
         carregarDados();
@@ -67,8 +62,7 @@ public class Menu {
         System.out.println("0 - Sair");
     }
 
-    // Todos os erros do cadastro (aluno não encontrado, dados inválidos, matrícula repetida)
-    // caem no mesmo catch e o usuário vê a mensagem da exceção
+    // todos os erros do cadastro caem no mesmo catch e o usuário vê a mensagem da exceção
     private void executar(int opcao) {
         try {
             switch (opcao) {
@@ -131,8 +125,6 @@ public class Menu {
         System.out.println("Aluno deletado com sucesso!");
     }
 
-    // ---------- arquivo ----------
-
     private void carregarDados() {
         try {
             List<Aluno> alunos = arquivo.carregar();
@@ -158,15 +150,12 @@ public class Menu {
         }
     }
 
-    // ---------- leitura do teclado ----------
-    // Tudo é lido com nextLine(), então não tem mais o problema do Enter sobrando no buffer
-
+    // tudo é lido com nextLine(), então não sobra Enter no buffer
     private String lerTexto(String mensagem) {
         System.out.print(mensagem);
         return scanner.nextLine().trim();
     }
 
-    // Repete a pergunta até a pessoa digitar um número inteiro
     private int lerInteiro(String mensagem) {
         while (true) {
             String valor = lerTexto(mensagem);

@@ -14,35 +14,25 @@ import observer.CadastroObserver;
 import validation.ValidadorAluno;
 
 /**
- * Regras e operações do CRUD de alunos.
- *
- * <p>Guarda os alunos em memória e garante que a matrícula não se repete. Usa dois padrões:</p>
- * <ul>
- *   <li><b>Strategy</b>: a conferência dos dados (campos vazios, nota fora de 0 a 10, etc.)
- *       é feita por um {@link ValidadorAluno}, que aplica regras intercambiáveis;</li>
- *   <li><b>Observer</b>: esta classe é o objeto observado. Depois de cada cadastro,
- *       atualização ou remoção, ela avisa os {@link CadastroObserver} registrados
- *       (por exemplo, o que salva no arquivo).</li>
- * </ul>
+ * Regras e operações do CRUD de alunos. Usa dois padrões de projeto:
+ * Strategy (os dados são conferidos por um ValidadorAluno, que aplica regras que dá pra trocar)
+ * e Observer (esta classe é a observada e avisa os CadastroObserver registrados depois de
+ * cada cadastro, atualização ou remoção).
  */
 public class CadastroAlunos {
 
-    // Map: acha o aluno pelo id direto, sem precisar percorrer uma lista.
-    // LinkedHashMap mantém a ordem em que os alunos foram cadastrados.
+    // Map: acha o aluno pelo id direto. LinkedHashMap mantém a ordem de cadastro.
     private final Map<Integer, Aluno> alunosPorId = new LinkedHashMap<>();
 
-    // Set: não aceita elementos repetidos, então garante que cada matrícula aparece uma vez só.
+    // Set: não aceita repetidos, então garante uma matrícula por aluno.
     private final Set<String> matriculas = new HashSet<>();
 
     private final ValidadorAluno validador;
-
-    // observers: quem quer ser avisado quando o cadastro muda
     private final List<CadastroObserver> observers = new ArrayList<>();
-
     private int proximoId = 1;
 
     /**
-     * Cria um cadastro vazio que usa as regras de validação padrão do sistema.
+     * Cria um cadastro vazio com as regras de validação padrão do sistema.
      */
     public CadastroAlunos() {
         this(ValidadorAluno.padrao());
@@ -50,7 +40,6 @@ public class CadastroAlunos {
 
     /**
      * Cria um cadastro vazio com um validador escolhido por quem está criando.
-     * Serve para usar outras regras de validação sem mexer nesta classe.
      *
      * @param validador o validador que confere os dados de cada aluno
      */
@@ -59,9 +48,8 @@ public class CadastroAlunos {
     }
 
     /**
-     * Registra um observer, que será avisado depois de cada cadastro, atualização
-     * ou remoção de aluno. Carregar alunos do arquivo ({@link #carregarAlunos(List)})
-     * não avisa os observers.
+     * Registra um observer, que será avisado depois de cada cadastro, atualização ou remoção.
+     * Carregar alunos do arquivo (carregarAlunos) não avisa os observers.
      *
      * @param observer quem quer ser avisado quando o cadastro mudar
      */
@@ -79,8 +67,7 @@ public class CadastroAlunos {
     }
 
     /**
-     * Cadastra um aluno novo (CREATE). O ID é gerado automaticamente e os espaços do
-     * começo e do fim dos textos são removidos. Os observers são avisados no final.
+     * Cadastra um aluno novo (CREATE) com ID gerado automaticamente.
      *
      * @param nome      nome do aluno
      * @param matricula matrícula do aluno (não pode já existir)
@@ -106,8 +93,8 @@ public class CadastroAlunos {
     }
 
     /**
-     * Lista os alunos na ordem em que foram cadastrados (READ). Devolve uma cópia,
-     * assim quem recebe a lista não mexe no cadastro por fora.
+     * Lista os alunos na ordem de cadastro (READ). Devolve uma cópia, para
+     * quem recebe a lista não mexer no cadastro por fora.
      *
      * @return uma nova lista com todos os alunos
      */
@@ -132,8 +119,8 @@ public class CadastroAlunos {
     }
 
     /**
-     * Atualiza todos os dados de um aluno (UPDATE). O aluno pode manter a própria
-     * matrícula, mas não pode usar a de outro aluno. Os observers são avisados no final.
+     * Atualiza todos os dados de um aluno (UPDATE). Ele pode manter a própria
+     * matrícula, mas não pode usar a de outro aluno.
      *
      * @param id        o ID do aluno que será atualizado
      * @param nome      o novo nome
@@ -169,7 +156,6 @@ public class CadastroAlunos {
 
     /**
      * Remove um aluno pelo ID (DELETE). A matrícula dele fica livre para ser usada de novo.
-     * Os observers são avisados no final.
      *
      * @param id o ID do aluno que será removido
      * @throws AlunoNaoEncontradoException se não existir aluno com esse ID
@@ -182,9 +168,8 @@ public class CadastroAlunos {
     }
 
     /**
-     * Coloca no cadastro os alunos lidos do arquivo ao abrir o sistema.
-     * Primeiro confere todos e só depois adiciona, para o cadastro não ficar
-     * pela metade se der erro. Os próximos IDs continuam a partir do maior ID lido.
+     * Coloca no cadastro os alunos lidos do arquivo ao abrir o sistema. Os próximos
+     * IDs continuam a partir do maior ID lido.
      *
      * @param alunos os alunos lidos do arquivo
      * @throws DadosInvalidosException      se algum aluno tiver dado inválido ou ID repetido
@@ -194,10 +179,10 @@ public class CadastroAlunos {
         Set<Integer> ids = new HashSet<>(alunosPorId.keySet());
         Set<String> matriculasLidas = new HashSet<>(matriculas);
 
+        // primeiro confere todos e só depois adiciona, para o cadastro não ficar pela metade se der erro
         for (Aluno aluno : alunos) {
             validador.validar(aluno);
 
-            // add() do Set devolve false quando o elemento já estava lá
             if (!ids.add(aluno.getId())) {
                 throw new DadosInvalidosException("O ID " + aluno.getId() + " aparece mais de uma vez.");
             }
@@ -211,15 +196,14 @@ public class CadastroAlunos {
         }
     }
 
-    // único lugar que coloca um aluno nas coleções (usado no cadastro e no carregamento)
+    // único lugar que coloca um aluno nas coleções
     private void adicionar(Aluno aluno) {
         alunosPorId.put(aluno.getId(), aluno);
         matriculas.add(aluno.getMatricula());
         proximoId = Math.max(proximoId, aluno.getId() + 1);
     }
 
-    // Avisa todos os observers. A lista é imutável e é a mesma para todos,
-    // então um observer não consegue mexer no cadastro nem atrapalhar os outros.
+    // a lista é imutável e a mesma para todos, então um observer não atrapalha os outros nem o cadastro
     private void notificarObservers() {
         List<Aluno> alunos = List.copyOf(alunosPorId.values());
 
@@ -228,7 +212,7 @@ public class CadastroAlunos {
         }
     }
 
-    // Monta um aluno com os dados como foram digitados, só para as regras de validação conferirem
+    // monta um aluno com os dados digitados só para as regras de validação conferirem
     private void validar(int id, String nome, String matricula, String curso, double nota)
             throws DadosInvalidosException {
         validador.validar(new Aluno(id, nome, matricula, curso, nota));

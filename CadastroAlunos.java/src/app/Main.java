@@ -7,13 +7,12 @@ import persistence.SalvarAoAlterarObserver;
 import view.Menu;
 
 /**
- * Classe que inicia o programa. É aqui que as peças são montadas e ligadas:
- * o cadastro, o arquivo, o observer que salva e o menu.
+ * Inicia o programa e liga as peças: cadastro, arquivo, observer que salva e menu.
  */
 public class Main {
 
     private Main() {
-        // classe só com o main: não precisa ser instanciada
+        // só tem o main, não precisa ser instanciada
     }
 
     /**
@@ -25,10 +24,9 @@ public class Main {
         CadastroAlunos cadastro = new CadastroAlunos();
         ArquivoAlunos arquivo = new ArquivoAlunos(Path.of("alunos.csv"));
 
-        // Observer: a partir daqui, toda alteração no cadastro é salva no arquivo automaticamente
+        // Observer: toda alteração no cadastro é salva no arquivo automaticamente
         cadastro.adicionarObserver(new SalvarAoAlterarObserver(arquivo, System.out::println));
 
-        Menu menu = new Menu(cadastro, arquivo);
-        menu.iniciar();
+        new Menu(cadastro, arquivo).iniciar();
     }
 }
